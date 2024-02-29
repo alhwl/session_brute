@@ -1,10 +1,8 @@
 import subprocess
+import os
 
 # Path to the word list file
 file_path = 'rockyou.txt'
-
-# Command template
-base_command = 'pdftk encrypted.pdf input_pw {} output output.pdf'
 
 # Open the file and read each line
 with open(file_path, 'r', encoding='latin-1') as file:
@@ -12,14 +10,19 @@ with open(file_path, 'r', encoding='latin-1') as file:
         # Strip newline characters from each line
         password = line.strip()
         
-        # Substitute {} with the current password
-        command_to_run = base_command.format(password)
+        # Command to run
+        command_to_run = ['pdftk', 'encrypted.pdf', 'input_pw', password, 'output', 'output.pdf']
         
-        try:
-            # Execute the command
-            subprocess.run(command_to_run, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        # Execute the command
+        result = subprocess.run(command_to_run, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        
+        # Check for success indicator - this is simplistic and might need to be adjusted based on pdftk's actual behavior
+        if "Error" not in result.stderr and os.path.exists("output.pdf") and os.path.getsize("output.pdf") > 0:
             print(f"Success with password: {password}")
-            break  # If successful, stop the loop
-        except subprocess.CalledProcessError:
-            # If the command failed (wrong password), continue with the next one
-            continue
+            break  # Exit the loop if successful
+        else:
+            # Optionally, remove the output.pdf if it's invalid to clean up before the next attempt
+            try:
+                os.remove("output.pdf")
+            except OSError:
+                pass  # If file doesn't exist or can't be removed, ignore and continue
